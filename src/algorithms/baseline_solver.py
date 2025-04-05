@@ -148,7 +148,8 @@ def oracle_baseline_greedy(users, provider, p_E_range=(0.1,100.1), p_N_range=(0.
                   "p_E": p_E,
                   "p_N": p_N,
                   "sum_f": 0,
-                  "sum_b": 0
+                  "sum_b": 0,
+                  "social_cost": 0
               })
               continue
             
@@ -163,11 +164,12 @@ def oracle_baseline_greedy(users, provider, p_E_range=(0.1,100.1), p_N_range=(0.
                     "p_E": p_E,
                     "p_N": p_N,
                     "sum_f": 0,
-                    "sum_b": 0
+                    "sum_b": 0,
+                    "social_cost": 0
                 })
             else:
               user_subset = [users[i] for i in X]
-              f, b, _ = models.ora_solver(user_subset, provider, p_E, p_N) # 求解 ORA 得到真实资源分配 (f, b)
+              f, b, oc = models.ora_solver(user_subset, provider, p_E, p_N) # 求解 ORA 得到真实资源分配 (f, b)
               # print(f"f={f},b={b}")
               if f is None or b is None: 
                 results.append({
@@ -176,7 +178,8 @@ def oracle_baseline_greedy(users, provider, p_E_range=(0.1,100.1), p_N_range=(0.
                   "p_E": p_E,
                   "p_N": p_N,
                   "sum_f": 0,
-                  "sum_b": 0
+                  "sum_b": 0,
+                  "social_cost": 0
                 })
               else:
                 U_current = (p_E-provider.c_E)*np.sum(f)+(p_N-provider.c_N)*np.sum(b)
@@ -187,7 +190,8 @@ def oracle_baseline_greedy(users, provider, p_E_range=(0.1,100.1), p_N_range=(0.
                     "p_E": p_E,
                     "p_N": p_N,
                     "sum_f": np.sum(f),
-                    "sum_b": np.sum(b)
+                    "sum_b": np.sum(b),
+                    "social_cost": oc+np.sum([u.cost_local() for u in users if u.user_id not in X])
                 })
 
             # 计算联合收益：ESP 和 NSP 的收益之和
