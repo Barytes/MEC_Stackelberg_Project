@@ -107,6 +107,86 @@ def epf_baseline(users, provider, initial_p_E, initial_p_N,
     X_final = user_game_solver.greedy_scm(users, provider, p_E, p_N)
     return p_E, p_N, X_final, utility, history
 
+def tutuncuoglu_greedy_search(users, provider, verbose=False):
+    """
+    基于贪心算法构造 Tutuncuoglu Baseline：
+      每次从未加入集合的用户中选取本地成本（cost_local）最高的用户，
+      加入 offloader 集合，然后利用 optimize_allocation_delay 求解资源分配，
+      计算每个用户支付价格： p_i = cost_local_i - alpha_i * offloading_time(f_i, b_i)
+      并计算 SP 的总收益 U = sum(p_i)。
+      
+    参数：
+      users: 用户对象列表，要求每个用户有属性 user_id, task (含 d, b, alpha),
+             local_cpu，以及 cost_local() 和 offloading_time(f, b) 方法。
+      provider: Provider 对象，包含 f_max, B_max, c_E, c_N 等参数。
+      verbose: 是否打印中间信息
+      
+    返回：
+      best_set: SP 收益最大的 offloader 集合（集合中存放用户 id）
+      best_utility: 对应的最大联合收益 U
+      best_prices: 对应各用户支付价格的列表
+      results: 每次迭代记录的详细结果列表
+    """
+    N = len(users)
+    remaining_users = set(range(N))
+    current_set = set()
+    best_utility = -np.inf
+    best_set = None
+    best_prices = None
+    results = []
+    
+    # 贪心搜索：每次从剩余用户中选择 cost_local 最高的用户加入 offloader 集合
+    while remaining_users:
+        # 选择本地成本最大的用户
+        candidate = max(remaining_users, key=lambda i: users[i].cost_local())
+        new_set = current_set.union({candidate})
+        
+        # 构造当前 offloader 用户列表
+        user_subset = [users[i] for i in new_set]
+        
+        # 求解资源分配问题
+        f, b, c = optimize_allocation_delay(user_subset, provider, verbose=False)
+        
+        if f is None or b is None:
+            # 若求解失败，认为当前集合不可行
+            U_current = -np.inf
+            p = [0]*len(user_subset)
+            sum_f, sum_b = 0, 0
+        else:
+            # 计算每个用户的支付价格： cost_local - (alpha * offloading_time)
+            # offloading_time(f_i, b_i) 由用户的方法给出
+            p = [users[i].cost_local() - users[i].task.alpha * users[i].offloading_time(f[idx], b[idx])
+                 for idx, i in enumerate(sorted(new_set))]
+            U_current = np.sum(p)
+            sum_f, sum_b = np.sum(f), np.sum(b)
+        
+        results.append({
+            "X": list(new_set),
+            "U_X": U_current,
+            "p": p,
+            "sum_f": float(sum_f),
+            "sum_b": float(sum_b),
+            "f": f.tolist() if f is not None else None,
+            "b": b.tolist() if b is not None else None
+        })
+        
+        if verbose:
+            print(f"Current set: {new_set}, U^* = {U_current}")
+            print(f"Prices: {p}")
+        
+        # 更新最优解
+        if U_current > best_utility:
+            best_utility = U_current
+            best_set = new_set.copy()
+            best_prices = p
+        
+        # 从剩余集合中移除候选用户
+        remaining_users.remove(candidate)
+        # 更新当前集合
+        current_set = new_set
+    
+    return best_set, best_utility, best_prices, results
+
 
 def tutuncuoglu_exhaustive_search(users, provider, verbose=False):
   def all_subsets(s):

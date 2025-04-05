@@ -1,0 +1,5 @@
+{
+  "vary_param": "c_E",
+  "values": [0.1,0.2,0.3,0.4,0.5,1,1.2,1.5,2,2.2,2.5,3],
+  "fixed_config_file": "/content/drive/MyDrive/MEC_Stackelberg_Project/configs/cn_1.json"
+}

@@ -1,0 +1,15 @@
+{
+  "num_users": 10,
+  "d_range": [0.5, 2.5],
+  "b_range": [8, 80],
+  "alpha_range": [10, 15],
+  "cpu_range": [0.5, 1.2],
+  "param_groups": [
+    {
+      "f_max": 100,
+      "B_max": 40,
+      "c_E": 1,
+      "c_N": 1
+    }
+  ]
+}
